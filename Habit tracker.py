@@ -510,5 +510,147 @@ class HabitTracker:
                                         font=("Arial", 16, "bold"))
                 habits_title.pack(anchor="w", pady=(0, 15))
 
+            def add_habit(self):
+                """Agregar un nuevo habito"""
+                name = self.habit_name_entry.get().strip()
+                category = self.category_var.get()
+                description = self.description_entry.get().strip()
+
+                if not name:
+                    messagebox.showwarning("Error", "Por favor ingresa el nombre del habitos")
+                    return
+                
+                if name in self.habits:
+                    messagebox.showwarning("Error", "Este habito ya existe")
+                    return
+                
+                # Agregar habito
+                self.habits[name] = {
+                    "category": category,
+                    "description": description,
+                    "created_date": datetime.now().strftime("%Y-%m-%d"),
+                    "target_frequency": "daily"
+                }
+
+                # Limpiar formulario
+                self.habit_name_entry.delete(0, tk.END)
+                self.description_entry.delete(0, tk.END)
+
+                # Guardar y actualizar 
+                self.save_data()
+                self.refresh_display()
+
+                messagebox.showinfo("Exito", f"Habito '{name}' agregado correctamente")
+
+            def toggle_habit_completion(self, habit_name):
+                """Marcar/desnarcar habito como completado para hoy"""
+                today = datetime.now().strftime("%Y-%m-%d")
+
+                if today in self.completions[habit_name]:
+                    self.completions[habit_name].discard(today)
+                    status = "desmarcado"
+                else:
+                    self.completions[habit_name].add(today)
+                    status = "completado"
+
+                self.save_data()
+                self.refresh_display()
+
+                messagebox.showinfo("Actualizado", f"Habito '{habit_name}' {status} para hoy")
+
+            def delete_habit(self, habit_name):
+                """Eliminar un habito"""
+                if messagebox.askyesno("Confirmar", f"¿Estas seguro de eliminar '{habit_name}'?"):
+                    del self.habits[habit_name]
+                    if habit_name in self.completions:
+                        del self.completions[habit_name]
+
+                    # Actualizar selector del calendario
+                    if self.selected_habit_for_calendar == habit_name:
+                        self.selected_habit_for_calendar = None
+
+                    self.save_data()
+                    self.refresh_display()
+                    messagebox.showinfo("Eliminado", f"Habito '{habit_name}' eliminado")
+
+            def calculate_streak(self, habit_name):
+                """Calcular racha actual de un habito """
+                if habit_name not in self.completions:
+                    return 0
+                
+                completed_dates = sorted(self.completions[habit_name])
+                if not completed_dates:
+                    return 0
+                
+                # Verificar racha desde hoy hacia atras 
+                current_date = datetime.now().date()
+                streak = 0
+
+                while True:
+                    date_str = current_date.strftime("%Y-%m-%d")
+                    if date_str in completed_dates:
+                        streak += 1
+                        current_date -= timedelta(days=1)
+
+                    else:
+                        break
+                return streak
+            
+            def calculate_completion_rate(self, habit_name, days=30):
+                """Calcular porcentaje de completitud en los ultimos N dias"""
+                if habit_name not in self.habits:
+                    return 0
+                
+                created_date = datetime.strptime(self.habits[habit_name]["created_date"], "%Y-%m-%d").date()
+                end_date = datetime.now().date()
+                start_date = max(created_date, end_date - timedelta(days=days-1))
+
+                total_days = (end_date - start_date).days +1
+                completed_days = 0
+
+                current_date = start_date
+                while current_date <= end_date:
+                    if current_date.strftime("%Y-%m-%d") in self.completions[habit_name]:
+                        completed_days += 1
+                    current_date += timedelta(days=1)
+
+                return (completed_days / total_days) * 100 if total_days > 0 else 0
+            
+            def refresh_display(self):
+                """Actualizar toda la interfaz"""
+                self.update._stats()
+                self.update_habits_display()
+                self.update_calendar()
+
+                # Actualizat boton de tema
+                theme_text = "Oscuro" if self.current_theme == "light" else "Claro"
+                self.theme_button.configure(text=theme_text,
+                                            bg=self.get_theme("card_bg"),
+                                            fg=self.get_theme("text_primary"))
+                
+            def update_stats(self):
+                """Actualizar seccion de estadisticas"""
+                # limpiar estadisticas anteriores
+                for widget in self.stats_container.winfo_children():
+                    widget.destroy()
+
+                # Calcular estadistica
+                total_habits = len(self.habits)
+                today = datetime.now().strftime("%Y-%m-%d")
+                completed_today = sum(1 for habit in self.habits if today in self.completions[habit])
+
+                # Calcular racha promedio
+                avg_streak = 0
+                if self.habits:
+                    total_streak = sum(self.calculate_strak(habit) for habit in self.habits)
+                    avg_streak = total_streak / len(self.habits)
+
+                # Crear cards de estadistica
+                stats_data = [
+                    ("Habitos Totales", total_habits, self.get_theme("bg_accent")),
+                    ("Completados Hoy", completed_today, self.get_theme("sucess")),
+                    ("Racha Promedio", f"{avg_streak:.1f}", self.get_theme("danger")),
+                ]
+
 
 
