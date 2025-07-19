@@ -330,3 +330,185 @@ class HabitTracker:
             else: 
                 self.current_cal_date = self.current_cal_date.replace(month=self.current_cal_date.month-1)
             self.update_calendar()
+
+        def next_month(self):
+            """Ir al mes siguiente"""
+            if self.current_cal_date.month == 12:
+                self.current_cal_date = self.current_cal_date.replace(year=self.current_cal_date.year+1, month=1)
+            else:
+                self.current_cal_date = self.current_cal_date.replace(month=self.current_cal_date.month+1)
+            self.update_calendar()
+
+        def update_calendar(self):
+            """Actualizar el calendario"""
+            # Limpiar grid anterior
+            for widget in self.calendar_grid_frame.winfo_children():
+                widget.destroy()
+
+            # Actualizar selector de habitos
+            habit_names = list(self.habits.keys()) if self.habits else []
+            self.habit_selector['values'] = habit_names
+
+            if not self.selected_habit_for_calendar and habit_names:
+                self.selected_habit_for_calendar = habit_names[0]
+                self.habit_selector.set(self.selected_habit_for_calendar)
+
+            # Actualizar etiqueta del mes
+            month_year = self.current_cal_date.strftime("%B %Y").title()
+            self.month_label.configure(text=month_year)
+
+            if not self.selected_habit_for_calendar:
+                no_habit_label = tk.Label(self.calendar_grid_frame,
+                                          text="No hay habitos para mostrar",
+                                          font=("Arial", 14),
+                                          fg=self.get_theme("text_secodnary"))
+                no_habit_label.pack(expand=True)
+                return
+            
+            # Crear calendario
+            cal = calendar.monthcalendar(self.current_cal_date.year, self.current_cal_date.month)
+
+            #Headers de dias de la semana
+            days = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom']
+            for i, day in enumerate(days):
+                header = tk.Label(self.calendar_gid_frame, text=day,
+                                  fonto=("Arial", 12, "bold"),
+                                  fg=self.get_theme("text_seconary"))
+                header._theme_type = 'secondary'
+                header.grid(row=0, column=i, pady=1, padx=1, sticky="nsew")
+
+            # Dias del calendario
+            completions = self.completions.get(self.selected_habit_for_calendar, set())
+
+            for week_num, week in enumerate(cal):
+                for day_num, day in enumerate(week):
+                    if day ==0:
+                        # Dia vacio
+                        empty_frame = tk.Frame(self.calendar_grid_frame,
+                                               width=60, height=60,
+                                               bg=self.get_theme("bg_primary"))
+                        empty_frame.grid(row=week_num+1, column=day_num, padx=1, pady=1, sticky="nsew" )
+                    else:
+                        # Dia del mes
+                        date_str = f"{self.current_cal_date.year}-{self.current_cal:date.month:02d}-{day:02d}"
+                        is_compelted = date_str in completions
+                        is_today = (datetime.now().date() ==
+                                    datetime(self.current_cal_date.year. self.current_cal_date.month, day).date)
+                        
+                        # Color del dia
+                        if is_compelted:
+                            bg_color = self.get_theme("success")
+                            text_color = "white"
+                        elif is_today:
+                            bg_color = self.get_theme("bg_accent")
+                            text_color = "white"
+                        else:
+                            bg_color = self.get_theme("card_bg")
+                            text_color = self.get_theme("text_primary")
+
+                        day_frame = tk.Frame(self.calendar_grid_frame,
+                                             width=60, height=60,
+                                             bg=bg_color,
+                                             relieef="solid", bd=1)
+                        day_frame.grid(row=week_num+1, column=day_num, padx=1, pady=1, sticky="nsew")
+                        day_frame.pack_propagete(False)
+
+                        day_label = tk.Label(day_frame, text=str(day),
+                                             bg=bg_color, fg=text_color,
+                                             font=("Arial", 12, "bold"))
+                        day_label.pack(expand=True)
+
+                        # Indicador visual para dias completados
+                        if is_completed:
+                            check_label = tk.Label(day_frame, text="✓",
+                                                   bg=bg_color, fg=text_color,
+                                                   font=("Arial", 8, "bold"))
+                            check_label.place(relx=0.8, rely=0.2)
+
+                # Configurar peso de filas y columnas
+                for i in range(7):
+                    self.calendar_grid_frame.columnconfigure(i, weight=1)
+                for i in range(len(cal)+1):
+                    self.calendar_grid_frame.rowconfigure(i, weight=1)
+
+                # Actualizar tema del calendario
+                self._apply_theme_recursive(self.calednar_grid_frame)
+            
+            def create_stats_section(self):
+                """Crear seccion de estadisticas"""
+                stats_frame = tk.Frame(self.scrollabel_frame)
+                stats_frame.pack(fill="x", padx=0, pady=20)
+
+                tk.Label(stats_frame,
+                         text="Estadisticas",
+                         font=("Arial", 16, "bold")).pack(anchor="w", pady=(0, 10))
+                
+                # Frame para las estasdisticas
+                self.stats_container = tk.Frame(stats_frame)
+                self.stats_container.pack(fill="x")
+            
+            def created_add_habit_form(self):
+                """Crear formulario para agregar habitos"""
+                form_frame = tk.Frame(self.scrollable_frame, relief="solid", bd=1)
+                form_frame._theme_type = 'card'
+                form_frame.pack(fill="x", pady=(0, 20))
+
+                title_label = tk.Label(form_frame,
+                                       text="Agregar Nuevo Habito",
+                                       font=("Arial", 16, "bold"))
+                title_label._theme_type = 'card'
+                title_label.pack(anchor="w", padx=20, pady=(20, 10))
+
+                # Nombre del habito
+                name_label = tk.Label(input_frame, text="Nombre del habito:")
+                name_label._theme_tyoe = 'card'
+                name_label.grid(row=0, column=0, sticky="w", padx=(0, 10))
+
+                self.habit_name_entry = tk.Entry(input_frame, width=30, font=("Arial", 11),
+                                                 bg=self.get_theme("card_bg"),
+                                                 fg=self.get_theme("text_primary"),
+                                                 relief="solid", bd=1)
+                self.habit_name_entry.grid(row=0, column=1, padx=(0,20))
+
+                # Categoria
+                cat_label = tk.Label(input_frame, text="Categoria:")
+                cat_label._theme_type = 'card'
+                cat_label.grid(row=0, column=2, sticky="w", padx=(0, 10))
+
+                self.category_var = tk.StringVar(value="Salud")
+                category_combo = ttk.Combobox(input_frame, textvariable=self.category_var,
+                                              values=["Salud", "Ejercico", "Estudio", "Trabajo", "Personal", "Otro"],
+                                              style="Custom.TCombobox")
+                category_combo.grid(row=0, column=3, padx=(0, 20))
+
+                # Descripcion
+                desc_label = tk.Label(input_frame, text="Descripcion:")
+                desc_label._theme_type = 'card'
+                desc_label.grid(row=1, column=0, sticky="w", pady=(10, 0), padx=(0, 10))
+
+                self.description_entry = tk.Entry(input_frame, width=50, font=("Arial", 11),
+                                                  bg=self.get_theme("card_bg"),
+                                                  fg=self.get_theme("text_priamry"),
+                                                  relief="solid", bd=1)
+                self.description_entry.grid(row=1, column=1, columnspan=2, sticky="ew", pady=(10,0), padx=(0, 20))
+
+                # Boton agregar
+                add_button = ttk.Button(input_frame, text="Agregar Habito",
+                                         command=self.add_habit, style="Primary.TButton")
+                add_button.grid(row=1, column=3, pady=(10, 0))
+
+                # Configurar peso de columnas
+                input_frame.columnconfigure(1, weight=1)
+
+            def create_habits_section(self):
+                """Crear seccion de habitos existentes"""
+                self.habits_frame = tk.Frame(self.scrollable_frame)
+                self.habits_frame.pack(fill="both", expand=True, pady=(0, 20))
+
+                habits_title = tk.Label(self.habits_frame,
+                                        text="Mis habitos",
+                                        font=("Arial", 16, "bold"))
+                habits_title.pack(anchor="w", pady=(0, 15))
+
+
+
